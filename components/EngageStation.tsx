@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
 import { BRANCHES, type BranchKey } from "@/lib/site-data";
@@ -13,7 +13,6 @@ import {
   FaCommentDots,
   FaGift,
   FaHandshake,
-  FaHandPointer,
   FaTicketAlt,
   FaTrophy,
   FaUtensils,
@@ -23,7 +22,6 @@ import {
 const LOGO_URL =
   "https://firebasestorage.googleapis.com/v0/b/hottacosleamingtonwebapp.firebasestorage.app/o/ht-site%2FLogotipo%20HT%20sin%20contorno%201024%201024.png?alt=media&token=72adc113-58fe-4f15-8d32-9bb6c4744872";
 
-const IDLE_MS = 90_000;
 const PROMO_MS = 8_000;
 
 type Tone = "red" | "yellow" | "dark";
@@ -48,14 +46,12 @@ type Promo = {
 export default function EngageStation({ branchKey }: { branchKey: BranchKey }) {
   const { locale, toggleLocale } = useLanguage();
   const branch = BRANCHES[branchKey];
-  const [attractMode, setAttractMode] = useState(true);
   const [promoIndex, setPromoIndex] = useState(0);
   const [handoffAction, setHandoffAction] = useState<Action | null>(null);
   const [handoffEmail, setHandoffEmail] = useState("");
   const [handoffStatus, setHandoffStatus] =
     useState<"idle" | "loading" | "success" | "error">("idle");
   const [handoffError, setHandoffError] = useState("");
-  const idleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const copy = useMemo(
     () =>
@@ -179,51 +175,12 @@ export default function EngageStation({ branchKey }: { branchKey: BranchKey }) {
 
   const promo = copy.promos[promoIndex % copy.promos.length];
 
-  function armIdleTimer() {
-    if (idleRef.current) clearTimeout(idleRef.current);
-    idleRef.current = setTimeout(() => setAttractMode(true), IDLE_MS);
-  }
-
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        if (idleRef.current) clearTimeout(idleRef.current);
-        setPromoIndex(0);
-        setAttractMode(true);
-        setHandoffAction(null);
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, []);
-
-  useEffect(() => {
-    if (attractMode) return;
-    armIdleTimer();
-    const reset = () => armIdleTimer();
-    window.addEventListener("pointerdown", reset, { passive: true });
-    window.addEventListener("touchstart", reset, { passive: true });
-    window.addEventListener("keydown", reset);
-    return () => {
-      window.removeEventListener("pointerdown", reset);
-      window.removeEventListener("touchstart", reset);
-      window.removeEventListener("keydown", reset);
-      if (idleRef.current) clearTimeout(idleRef.current);
-    };
-  }, [attractMode]);
-
-  useEffect(() => {
-    if (attractMode) return;
     const interval = setInterval(() => {
       setPromoIndex((current) => (current + 1) % copy.promos.length);
     }, PROMO_MS);
     return () => clearInterval(interval);
-  }, [attractMode, copy.promos.length]);
-
-  function wake() {
-    setAttractMode(false);
-    setPromoIndex(0);
-  }
+  }, [copy.promos.length]);
 
   const toneClass = (tone: Tone) => {
     if (tone === "red") return styles.cardRed;
@@ -236,7 +193,6 @@ export default function EngageStation({ branchKey }: { branchKey: BranchKey }) {
     setHandoffEmail("");
     setHandoffStatus("idle");
     setHandoffError("");
-    armIdleTimer();
   }
 
   function closeHandoff() {
@@ -281,41 +237,6 @@ export default function EngageStation({ branchKey }: { branchKey: BranchKey }) {
     }
   }
 
-  if (attractMode) {
-    return (
-      <button
-        type="button"
-        className={styles.attract}
-        onPointerDown={wake}
-        onClick={wake}
-        aria-label={copy.touch}
-      >
-        <img className={styles.attractImage} src={branch.imageUrl} alt="" aria-hidden="true" />
-        <div className={styles.attractOverlay} />
-        <div className={styles.attractInner}>
-          <div className={styles.attractBrand}>
-            <span className={styles.attractLogo}>
-              <img src={LOGO_URL} alt="Hot Tacos" />
-            </span>
-            <span className={styles.attractBrandText}>
-              <strong>HOT TACOS</strong>
-              <span>{branch.shortName}</span>
-            </span>
-          </div>
-          <div className={styles.attractCopy}>
-            <span className={styles.attractEyebrow}>Hot Tacos Experience</span>
-            <h1 className={styles.attractTitle}>{copy.attractTitle}</h1>
-            <p className={styles.attractSubtitle}>{copy.attractSubtitle}</p>
-          </div>
-          <span className={styles.touch}>
-            <span className={styles.touchIcon}><FaHandPointer /></span>
-            {copy.touch}
-          </span>
-        </div>
-      </button>
-    );
-  }
-
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
@@ -333,10 +254,7 @@ export default function EngageStation({ branchKey }: { branchKey: BranchKey }) {
           <button
             type="button"
             className={styles.language}
-            onClick={() => {
-              toggleLocale();
-              armIdleTimer();
-            }}
+            onClick={toggleLocale}
           >
             {locale === "es" ? "EN" : "ES"}
           </button>
