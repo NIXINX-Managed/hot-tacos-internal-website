@@ -1,0 +1,45 @@
+name: Hot Tacos - Internal Website (manual preview)
+
+# Manual preview only; does not change the production domain.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ht-internal-website-hot-tacos-preview
+  cancel-in-progress: false
+
+jobs:
+  deploy_hot_tacos:
+    name: Publish Hot Tacos internal website (preview)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_HOT_TACOS_INTERNAL_WEBSITE }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID_HOT_TACOS_INTERNAL_WEBSITE }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_HOT_TACOS_INTERNAL_WEBSITE }}
+    steps:
+      - name: Checkout NIXINX-managed website
+        uses: actions/checkout@v4
+
+      - name: Verify destination configuration
+        shell: bash
+        run: |
+          if [[ -z "$VERCEL_TOKEN" || -z "$VERCEL_ORG_ID" || -z "$VERCEL_PROJECT_ID" ]]; then
+            echo 'Missing scoped Hot Tacos Vercel token, team ID, or website project ID.' >&2
+            exit 1
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Hot Tacos preview configuration
+        run: vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+
+      - name: Build preview website (not native Android)
+        run: vercel build --token="$VERCEL_TOKEN"
+
+      - name: Publish preview website to existing Vercel project
+        run: vercel deploy --prebuilt --token="$VERCEL_TOKEN"
