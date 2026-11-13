@@ -42,8 +42,6 @@ jobs:
       - name: Pull Hot Tacos production configuration
         run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
-      - name: Build production website (not native Android)
-        run: vercel build --prod --token="$VERCEL_TOKEN"
-
-      - name: Publish production website to existing Vercel project
-        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+      # Build remotely in Vercel: its sensitive Firebase secrets are not exported by `vercel pull`.
+      - name: Build and publish production on Vercel (not GitHub)
+        run: vercel deploy --yes --prod --token="$VERCEL_TOKEN"
