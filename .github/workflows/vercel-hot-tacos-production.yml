@@ -1,0 +1,49 @@
+name: Hot Tacos - Internal Website (production)
+
+# Future application changes on main deploy automatically; workflow-only changes do not.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ht-internal-website-hot-tacos-production
+  cancel-in-progress: false
+
+jobs:
+  deploy_hot_tacos:
+    name: Publish Hot Tacos internal website (production)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN_HOT_TACOS_INTERNAL_WEBSITE }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID_HOT_TACOS_INTERNAL_WEBSITE }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID_HOT_TACOS_INTERNAL_WEBSITE }}
+    steps:
+      - name: Checkout NIXINX-managed website
+        uses: actions/checkout@v4
+
+      - name: Verify destination configuration
+        shell: bash
+        run: |
+          if [[ -z "$VERCEL_TOKEN" || -z "$VERCEL_ORG_ID" || -z "$VERCEL_PROJECT_ID" ]]; then
+            echo 'Missing scoped Hot Tacos Vercel token, team ID, or website project ID.' >&2
+            exit 1
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Hot Tacos production configuration
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build production website (not native Android)
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Publish production website to existing Vercel project
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
